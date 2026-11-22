@@ -214,6 +214,43 @@ import Testing
             #expect(receivedData == responseData)
         }
 
+        @Test("Send through an injected URLSession", .httpClientTransportSetup)
+        func testSendThroughInjectedSession() async throws {
+            let configuration = URLSessionConfiguration.ephemeral
+            configuration.protocolClasses = [MockURLProtocol.self]
+            configuration.httpAdditionalHeaders = ["X-Injected-Session": "yes"]
+            let session = URLSession(configuration: configuration)
+
+            let transport = HTTPClientTransport(
+                endpoint: testEndpoint,
+                session: session,
+                streaming: false,
+                logger: nil
+            )
+            try await transport.connect()
+
+            let messageData = #"{"jsonrpc":"2.0","method":"initialize","id":1}"#.data(using: .utf8)!
+            let responseData = #"{"jsonrpc":"2.0","result":{},"id":1}"#.data(using: .utf8)!
+
+            await MockURLProtocol.requestHandlerStorage.setHandler {
+                [testEndpoint] (request: URLRequest) in
+                // Set only on the injected session's configuration, so this request went through it.
+                #expect(request.value(forHTTPHeaderField: "X-Injected-Session") == "yes")
+                let response = HTTPURLResponse(
+                    url: testEndpoint, statusCode: 200, httpVersion: "HTTP/1.1",
+                    headerFields: ["Content-Type": "application/json"])!
+                return (response, responseData)
+            }
+
+            try await transport.send(messageData)
+
+            let stream = await transport.receive()
+            var iterator = stream.makeAsyncIterator()
+            let receivedData = try await iterator.next()
+
+            #expect(receivedData == responseData)
+        }
+
         @Test("Send and Receive Session ID", .httpClientTransportSetup)
         func testSendAndReceiveSessionID() async throws {
             let configuration = URLSessionConfiguration.ephemeral
