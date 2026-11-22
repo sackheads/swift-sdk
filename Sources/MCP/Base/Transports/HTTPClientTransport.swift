@@ -129,7 +129,21 @@ public actor HTTPClientTransport: Transport {
         )
     }
 
-    internal init(
+    /// Creates a new HTTP transport client that uses the given `URLSession`.
+    ///
+    /// Use this to supply a session with a delegate (for example a redirect policy or custom TLS
+    /// handling) or any configuration the `configuration:` initializer cannot express.
+    ///
+    /// - Parameters:
+    ///   - endpoint: The server URL to connect to
+    ///   - session: The URLSession to use for HTTP requests
+    ///   - streaming: Whether to enable SSE streaming mode (default: false)
+    ///   - sseInitializationTimeout: Maximum time to wait for session ID before proceeding with SSE (default: 10 seconds)
+    ///   - protocolVersion: The MCP protocol version to use
+    ///   - authorizer: Optional ``HTTPClientAuthorizer`` for automatic Bearer token acquisition and retries.
+    ///   - requestModifier: Optional closure to customize requests before they are sent (default: no modification)
+    ///   - logger: Optional logger instance for transport events
+    public init(
         endpoint: URL,
         session: URLSession,
         streaming: Bool = false,
